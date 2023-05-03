@@ -1,6 +1,6 @@
 # EstimateBVs
 
-Do you have SNP data you'd like to use for estimating breeding values.
+Do you have SNP data you'd like to use for estimating breeding values?
 
 This repository should be able to help
 
