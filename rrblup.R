@@ -21,13 +21,15 @@ genoVar <- geno %>%  select(where(~ n_distinct(.) > 1))
 genoVar <- genoVar[1:269,]
 M <- as.matrix(genoVar %>%select_if(~!any(is.na(.))))
 
+GM=tcrossprod(genoTrain)/dim(genoTrain)
+
 
 ```
 
 Build model and predict marker effects
 ```{R}
 
-EBVans <-mixed.solve(y=pheno, Z=M, K=NULL, SE=FALSE, return.Hinv=FALSE)
+EBVans <-mixed.solve(y=pheno, Z=GM, K=NULL, SE=FALSE, return.Hinv=FALSE)
 
 markerEffects <- EBVans$u
 
