@@ -21,6 +21,7 @@ genoVar <- geno %>%  select(where(~ n_distinct(.) > 1))
 genoVar <- genoVar[1:269,]
 M <- as.matrix(genoVar %>%select_if(~!any(is.na(.))))
 
+M <- scale(M)
 GM=tcrossprod(genoTrain)/dim(genoTrain)
 
 
