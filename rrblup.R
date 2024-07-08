@@ -1,59 +1,48 @@
-load required packages
-```{R}
+#load required packages
 library(rrBLUP)
 library(BMTME)
 library(tidyverse)
 library(readxl)
-```
 
-load data and prepare matrices
 
+#prepare data
 data <- as.data.frame(read_xlsx("trainingData.xlsx", sheet= 2))
+geno <- data[,-c(1,2)]
+pheno <- as.data.frame(data$Yield)
+pheno <- as.matrix(pheno[1:269,]) #remove NAs at the bottom of the DF
+ids <- as.data.frame(data$ID)
+ids = ids[1:269,] #remove NAs at the bottom of the DF
 
-```{R}
-geno <- data[,-c(1:15)]
-pheno <- as.data.frame(data[,6])
-pheno <- as.matrix(pheno[1:269,])
-ids <- as.data.frame(data[,1])
-
+#pull SNPs with missing calls
 geno[geno=="--"] <- NA
 genoVar <- geno %>%  select(where(~ n_distinct(.) > 1))
 genoVar <- genoVar[1:269,]
 M <- as.matrix(genoVar %>%select_if(~!any(is.na(.))))
 
-M <- scale(M)
-GM=tcrossprod(genoTrain)/dim(genoTrain)
+#Calculate and pull marker effects
+EBV <-mixed.solve(y=pheno, Z=M, K=NULL, SE=FALSE, return.Hinv=FALSE)
+markerEffects <- EBV$u #u isolates the coefficients (marker effects)
 
-
-```
-
-Build model and predict marker effects
-```{R}
-
-EBVans <-mixed.solve(y=pheno, Z=GM, K=NULL, SE=FALSE, return.Hinv=FALSE)
-
-markerEffects <- EBVans$u
-
-```
-
-
+#load candidates and update genotypes so test SNPs are identical to training SNPs
 candidates <- read_xlsx("Candidates.xlsx", sheet=2)
-```{R}
+candidates = candidates[,c(1:2)] #market class and id only
+candidates = data.frame(candidates)
+idCand = candidates$IDS
+rownames(candidates) = idCand
+rownames(M) = ids
+M = data.frame(M)
+candidates = merge(candidates,M, by ="row.names")
+
+#testing only crans
 marketclass <- candidates[(candidates$MarketClass == 'cran'),]
-candGeno <- as.matrix(marketclass[,-c(1,2)])
-sampleIDs <- marketclass[,2]
-```
+candGeno <- as.matrix(marketclass[,-c(1:3)]) #pull geno only
 
-```{R}
+sampleIDs <- marketclass[,3]
 GEBVs <- as.data.frame(candGeno %*% markerEffects)
-```
-
-Apply sample IDs to GEBVs and order by value
-```{R}
 
 GEBVs <- cbind(sampleIDs, GEBVs)
-colnames(GEBVs) <- c("IDs", "GEBVs")
+colnames(GEBVs) <- c("sampleIDs", "GEBVs")
 Top <- GEBVs %>% arrange(desc((GEBVs)))
+Top
 
-cranParentsReclustSNP <- as.data.frame(Top[1:5,1])
-```
+write.csv(Top, "cranGEBVsJan2023")
