@@ -1,8 +1,10 @@
 # EstimateBVs
 
-Estimate breeding values using SNP data
+The goal of this repo is to train a genomic prediction model using the rrblup function mixed.solve() and estimate breeding values of our selection candidates. 
 
-There are four models which can be used to estimate breeding values: rrBLUP, SVM, RF, and ANN
+Open the script called rrblup.r
 
-We train on our whole dataset and estimate values on a desired subset.
+Use trainingdata.xlsx to train the model.
+
+Use Candidates.xlsx to predict breeding values of the candidates.
 
