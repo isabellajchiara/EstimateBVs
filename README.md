@@ -4,7 +4,7 @@ The goal of this repo is to train a genomic prediction model using the rrblup fu
 
 Open the script called rrblup.r
 
-Use trainingdata.xlsx to train the model.
+Use finalTrainingSet.xlsx to train the model.
 
 Use Candidates.xlsx to predict breeding values of the candidates.
 
