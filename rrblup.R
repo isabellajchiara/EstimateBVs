@@ -10,9 +10,8 @@ library(writexl)
 #prepare data
 data <- as.data.frame(read_xlsx("finalTrainingSet.xlsx"))
 geno <- data[,-c(1:3)] #genotype data only
-pheno <- as.data.frame(data$Yield) #pull response variable 
-pheno <- pheno[-nrow(pheno),]
-pheno <- as.vector(pheno)
+responseVar <- as.vector(data$Yield)
+
 ids <- as.list(data$ID) #pull genotype IDs
 
 #pull SNPs with missing calls
@@ -21,7 +20,7 @@ genoVar <- geno %>%  select(where(~ n_distinct(.) > 1)) #remove SNPs will no var
 M <- as.matrix(genoVar %>%select_if(~!any(is.na(.)))) #remove SNPs with no calls 
 
 #Calculate and pull marker effects
-EBV <-mixed.solve(y=pheno, Z=M, K=NULL, SE=FALSE, return.Hinv=FALSE) # 
+EBV <-mixed.solve(y=responseVar, Z=M, K=NULL, SE=FALSE, return.Hinv=FALSE) # 
 markerEffects <- EBV$u #u isolates the random effects (marker effects)
 
 #load candidates and update genotypes so test SNPs are identical to training SNPs
@@ -36,9 +35,11 @@ rownames(M) = ids
 M = data.frame(M)
 candidates = merge(candidates,M, by ="row.names") #match candidates with their genotype
 
+pheno <- as.data.frame(data$Yield) #pull response variable 
+pheno <- pheno[-nrow(pheno),]
+pheno <- as.vector(pheno)
 BV = as.data.frame(pheno)
 rownames(BV) = idCand
-
 
 #testing only crans
 marketclass <- candidates[(candidates$MarketClass == 'cran'),] #pull only crans 
@@ -49,6 +50,7 @@ GEBVs <- as.data.frame(candGeno %*% markerEffects) #compute GEBVs
 
 GEBVs <- cbind(sampleIDs, GEBVs) #associate GEBVs with IDs
 colnames(GEBVs) <- c("sampleIDs", "GEBVs")
+rownames(GEBVs) <- GEBVs$sampleIDs
 Top <- GEBVs %>% arrange(desc((GEBVs)))
 write.csv(Top, "cranGEBVsJan2023.csv")
 
