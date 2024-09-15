@@ -1,15 +1,18 @@
+
 #load required packages
 library(rrBLUP)
 library(BMTME)
 library(tidyverse)
 library(readxl)
-
+library(dplyr)
+library(writexl)
 
 #prepare data
-data <- as.data.frame(read_xlsx("trainingData.xlsx", sheet= 2))
-data = data[1:269,] #remove NAs at the bottom of the DF
-geno <- data[,-c(1:15)] #genotype data only
-pheno <- as.vector(data$Yield) #pull response variable 
+data <- as.data.frame(read_xlsx("finalTrainingSet.xlsx"))
+geno <- data[,-c(1:3)] #genotype data only
+pheno <- as.data.frame(data$Yield) #pull response variable 
+pheno <- pheno[-nrow(pheno),]
+pheno <- as.vector(pheno)
 ids <- as.list(data$ID) #pull genotype IDs
 
 #pull SNPs with missing calls
@@ -24,16 +27,24 @@ markerEffects <- EBV$u #u isolates the random effects (marker effects)
 #load candidates and update genotypes so test SNPs are identical to training SNPs
 candidates <- read_xlsx("Candidates.xlsx", sheet=2)
 candidates = data.frame(candidates[,c(1:2)]) #market class and id only
+candidates = candidates[!duplicated(candidates$IDS),] #get individual observations 
+candidates = candidates[-nrow(candidates),]
+idCand <- ids[!is.na(ids)]
+rownames(candidates) = idCand
+
 rownames(M) = ids
 M = data.frame(M)
 candidates = merge(candidates,M, by ="row.names") #match candidates with their genotype
-TBV = merge(candidates,pheno, by="row.names")
+
+BV = as.data.frame(pheno)
+rownames(BV) = idCand
+
 
 #testing only crans
 marketclass <- candidates[(candidates$MarketClass == 'cran'),] #pull only crans 
 candGeno <- as.matrix(marketclass[,-c(1:3)]) #pull geno only
 
-sampleIDs <- as.data.frame(marketclass[,3]) #pull IDs
+sampleIDs <- as.data.frame(marketclass$IDS) #pull IDs
 GEBVs <- as.data.frame(candGeno %*% markerEffects) #compute GEBVs
 
 GEBVs <- cbind(sampleIDs, GEBVs) #associate GEBVs with IDs
@@ -42,17 +53,8 @@ Top <- GEBVs %>% arrange(desc((GEBVs)))
 write.csv(Top, "cranGEBVsJan2023.csv")
 
 
-tbv = data[!duplicated(data$IDS),] #get individual observations 
-tbv_id = as.list(tbv$IDS)
-tbv_yield = as.data.frame(tbv$Yield) #get only yield
-tbv_yield$GenoNames= tbv_id #TBV_Yield with all IDs
-
-gebv_ids = as.list(GEBVs$sampleIDs)
-GEBVs = as.data.frame(GEBVs$GEBVs)
-GEBVs$GenoNames = gebv_ids #GEBV_Yield with all IDs
-
-#Quick check on accuracy
-tbv_eval = merge(GEBVs,tbv_yield,by="GenoNames") #merge true and estimated BVs for eval
-colnames(tbv_eval) = c("id","gebv","ebv")
-acc = cor(tbv_eval$gebv,tbv_eval$ebv)
+eval = merge(GEBVs,BV,by="row.names") #merge true and estimated BVs for eval
+colnames(eval) = c("id","id","gebv","ebv")
+acc = cor(eval$gebv,eval$ebv)
+acc
 
