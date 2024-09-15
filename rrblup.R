@@ -35,26 +35,24 @@ rownames(M) = ids
 M = data.frame(M)
 candidates = merge(candidates,M, by ="row.names") #match candidates with their genotype
 
-pheno <- as.data.frame(data$Yield) #pull response variable 
-pheno <- pheno[-nrow(pheno),]
-pheno <- as.vector(pheno)
-BV = as.data.frame(pheno)
+BV <- as.data.frame(data$Yield) #pull response variable 
+BV <- as.data.frame(BV[-nrow(BV),]) #remove unnamed entry at end of DF
 rownames(BV) = idCand
 
 #testing only crans
 marketclass <- candidates[(candidates$MarketClass == 'cran'),] #pull only crans 
 candGeno <- as.matrix(marketclass[,-c(1:3)]) #pull geno only
-
 sampleIDs <- as.data.frame(marketclass$IDS) #pull IDs
 GEBVs <- as.data.frame(candGeno %*% markerEffects) #compute GEBVs
 
+#create outupt
 GEBVs <- cbind(sampleIDs, GEBVs) #associate GEBVs with IDs
 colnames(GEBVs) <- c("sampleIDs", "GEBVs")
 rownames(GEBVs) <- GEBVs$sampleIDs
 Top <- GEBVs %>% arrange(desc((GEBVs)))
 write.csv(Top, "cranGEBVsJan2023.csv")
 
-
+#calculate accuracy
 eval = merge(GEBVs,BV,by="row.names") #merge true and estimated BVs for eval
 colnames(eval) = c("id","id","gebv","ebv")
 acc = cor(eval$gebv,eval$ebv)
