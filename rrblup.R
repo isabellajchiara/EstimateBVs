@@ -8,34 +8,25 @@ library(dplyr)
 library(writexl)
 
 #prepare data
-data <- as.data.frame(read_xlsx("finalTrainingSet.xlsx"))
-geno <- data[,-c(1:3)] #genotype data only
-responseVar <- as.vector(data$Yield)
-
-ids <- as.list(data$ID) #pull genotype IDs
-
-#pull SNPs with missing calls
-geno[geno=="--"] <- NA #no calls become NA
-genoVar <- geno %>%  select(where(~ n_distinct(.) > 1)) #remove SNPs will no variance  
-M <- as.matrix(genoVar %>%select_if(~!any(is.na(.)))) #remove SNPs with no calls 
+data <- as.data.frame(read.csv("Training.csv"))
+geno <- as.matrix(data[,-c(1:2)]) #genotype data only
+responseVar <- as.vector(data$responseVar)
+ids <- as.list(data$ids) #pull genotype IDs
 
 #Calculate and pull marker effects
-EBV <-mixed.solve(y=responseVar, Z=M, K=NULL, SE=FALSE, return.Hinv=FALSE) # 
+EBV <-mixed.solve(y=responseVar, Z=geno, K=NULL, SE=FALSE, return.Hinv=FALSE) # 
 markerEffects <- EBV$u #u isolates the random effects (marker effects)
 
 #load candidates and update genotypes so test SNPs are identical to training SNPs
-candidates <- read_xlsx("Candidates.xlsx", sheet=2)
-candidates = data.frame(candidates[,c(1:2)]) #market class and id only
-candidates = candidates[!duplicated(candidates$IDS),] #get individual observations 
-candidates = candidates[-nrow(candidates),]
+candidates <- read.csv("parentCandidates.csv")
+candidates = data.frame(candidates[,c(2:3)]) #market class and id only
 idCand <- ids[!is.na(ids)]
 rownames(candidates) = idCand
 
-rownames(M) = ids
-M = data.frame(M)
-candidates = merge(candidates,M, by ="row.names") #match candidates with their genotype
+rownames(geno) = ids
+candidates = merge(candidates,geno, by ="row.names") #match candidates with their genotype
 
-BV <- as.data.frame(data$Yield) #pull response variable 
+BV <- as.data.frame(data$responseVar) #pull response variable 
 BV <- as.data.frame(BV[-nrow(BV),]) #remove unnamed entry at end of DF
 rownames(BV) = idCand
 
@@ -50,6 +41,8 @@ GEBVs <- cbind(sampleIDs, GEBVs) #associate GEBVs with IDs
 colnames(GEBVs) <- c("sampleIDs", "GEBVs")
 rownames(GEBVs) <- GEBVs$sampleIDs
 Top <- GEBVs %>% arrange(desc((GEBVs)))
+Top[1:5,]
+
 write.csv(Top, "cranGEBVsJan2023.csv")
 
 #calculate accuracy
